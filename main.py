@@ -35,7 +35,6 @@ class MainGUI:
         self.root.mainloop()
 
     def startGame(self):
-        print(str(self.columnSize.get()) + "," + str(self.rowSize.get()))
         self.root.destroy()
         self.createGame(self.columnSize.get(),self.rowSize.get())
         # GameGUI(self.columnSize.get, self.rowSize.get())
@@ -45,15 +44,22 @@ class MainGUI:
         self.game = Tk()
         geo = "%dx%d" % (col *40 , row*40)
         self.game.geometry(geo)
+        self.btnList = [[]]
 
         self.game.title("MineSweeper")
         mineGrid = tk.Frame(self.game)
         for i in range(col):
             for j in range(row):
                 mineGrid.columnconfigure(i, weight=1)
-                btn = tk.Button(mineGrid, text="      ")
-                btn.grid(row=j, column=i)
+                self.btnList[i].append(tk.Button(mineGrid, text="    ", command=lambda: [self.tileClick(i,j)]))
+                self.btnList[i][j].grid(row=j, column=i)
+            self.btnList.append([])
         mineGrid.pack()
+
+    def tileClick(self, col, row):
+        print("clicked")
+        self.btnList[col][row].configure(bg="blue")
+        
 
     
 

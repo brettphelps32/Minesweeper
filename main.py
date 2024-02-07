@@ -6,6 +6,7 @@ class MainGUI:
     def __init__(self):
         self.btnList = [[]]
         self.root = Tk()    
+        self.bombsPlaced = False
 
         self.root.geometry("500x500")
         self.root.title("MineSweeper")
@@ -22,10 +23,6 @@ class MainGUI:
         self.rowSize = tk.IntVar()
         slider2 = Scale(self.root, from_=5, to=25, orient=HORIZONTAL, variable=self.rowSize)
         slider2.pack()
-
-        label2 = tk.Label(self.root, text="Number of bombs: ")
-        label2.pack(pady = 40)
-        
         
 
         startButton = tk.Button(self.root, text="Start game", command=lambda: [self.startGame()])
@@ -59,17 +56,14 @@ class MainGUI:
                 self.mineGrid.columnconfigure(i, weight=1)
                 temp = Btn("    ", i, j, 'white', self)
                 self.btnList[i].append(temp)
-                if self.btnList[i][j].isBomb:
-                    self.bombNum = self.bombNum - 1
                 
             self.btnList.append([])
 
     def checkAround(self, btn):
         bombsAround = 0
-        self.visitedTile.append(btn)
         for i in range(-1,2):
             for j in range(-1,2):
-                if (btn.column - j >= 0 and btn.column - j < len(self.btnList) -1) and (btn.row - i >= 0 and btn.row - i < len(self.btnList)-1):
+                if (btn.column - j >= 0 and btn.column - j < self.column) and (btn.row - i >= 0 and btn.row - i < self.row):
                     temp = self.btnList[btn.row - i][btn.column - j]
                     if self.bombChecker(temp.column, temp.row):
                         bombsAround = bombsAround + 1
@@ -77,7 +71,7 @@ class MainGUI:
         if bombsAround == 0:
             for i in range(-1,2):
                 for j in range(-1,2):
-                    if (btn.column - j >= 0 and btn.column - j < len(self.btnList) -1) and (btn.row - i >= 0 and btn.row - i < len(self.btnList)-1):
+                    if (btn.column - j >= 0 and btn.column - j < self.column) and (btn.row - i >= 0 and btn.row - i < self.row):
                         if self.btnList[btn.row - i][btn.column - j] not in self.visitedTile:
                             self.btnList[btn.row - i][btn.column - j].tileClick(self)
             self.clearNonTreat(btn)
@@ -89,6 +83,49 @@ class MainGUI:
     
     def clearNonTreat(self, btn):
         return
+    
+    def placeBombs(self, btn):
+        self.placeSafeSpace(btn)
+        for i in range(len(self.btnList) - 1):
+            for j in range(len(self.btnList[i])):
+                if self.bombNum > 0:
+                    if not self.btnList[i][j].safeSpace:
+                        if btn.coinFlip(self):
+                            self.btnList[i][j].isBomb = bool(True)
+                            temp = self.btnList[i][j]
+                            # temp['bg'] = "red"
+                            self.bombNum = self.bombNum - 1
+                else:
+                    return False
+        
+        while self.bombNum > 0:
+            temp = self.btnList[random.randint(0,self.row - 1)][random.randint(0,self.column - 1)]
+            
+            if not temp.isBomb and not temp.safeSpace:
+                temp.isBomb = True
+                self.bombNum = self.bombNum -1
+                # temp['bg'] = 'red'
+                
+    def placeSafeSpace(self, btn):
+        for i in range(-1,2):
+            for j in range(-1,2):
+                if (btn.column - j >= 0 and btn.column - j < self.column) and (btn.row - i >= 0 and btn.row - i < self.row):
+                    temp = self.btnList[btn.row - i][btn.column - j]
+                    temp.safeSpace = True
+
+    def printTextBoard(self):
+        print(self.btnList)
+        temp = ""
+        for i in range(len(self.btnList) - 1):
+            for j in range(self.column):
+                if (self.btnList[i][j].isBomb):
+                    temp = temp + "x"
+                elif not self.btnList[i][j].isBomb:
+                    temp = temp+ "o"
+            print(temp)
+            temp = ""
+                    
+    
 
 class Btn(Button):
     def __init__(self, text, r, col, color=None, board = None):
@@ -97,17 +134,12 @@ class Btn(Button):
         self.column = col
         self.board = board
         self.color = color
-        self.bombRemaining = board.bombNum
         self.isBomb = False
 
-        
+        self.safeSpace = False
 
-        
-        
-        # self.btnType(board)
         super().__init__()
         if self.isBomb:
-            None
             self['bg'] = 'white'
             self['bg'] = 'red'
         else:
@@ -116,29 +148,6 @@ class Btn(Button):
         self['command'] = lambda: self.tileClick(board)
         self.grid(row=self.row, column=self.column)
         self.bind("<Button-3>", self.rightClick)
-
-    def btnType(self, board, c, r):
-        tempList = board.btnList
-        for i in range(len(tempList) - 1):
-            for j in range(len(tempList[i])):
-                if board.bombNum > 0:
-                    if r+1 != i and r != i and r-1 != i:
-                        print("Row "+ str(r)+ ": at " + str(i))
-                        if c !=j and c-1 != j and c + 1!= j:
-                            if self.coinFlip(board):
-                                tempList[i][j].isBomb = bool(True)
-                                temp = tempList[i][j]
-                                temp['bg'] = "red"
-                                board.bombNum = board.bombNum - 1
-                else:
-                    return False
-        # while board.bombNum > 0:
-        #     temp = board.btnList[random.randint(0,board.row - 1)][random.randint(0,board.column - 1)]
-            
-        #     if not temp.isBomb:
-        #         temp.isBomb = True
-        #         board.bombNum = board.bombNum -1
-        #         temp['bg'] = 'red'
 
     def coinFlip(self, board):
         if random.randint(0,board.buttonPropability) == board.buttonPropability:
@@ -152,15 +161,18 @@ class Btn(Button):
     
     def tileClick(self, board):
         if self['bg'] == 'white':
-            if board.bombNum > 0:
-                self.btnType(board, self.column, self.row)
+            if not board.bombsPlaced:
+                board.bombsPlaced = True
+                board.placeBombs(self)
             if self.isBomb:
                 print('BOOM')
             else:
+                board.visitedTile.append(self)
                 self.config(text=board.checkAround(self))
                 self.colorChange()
                 if len(self.board.visitedTile) == self.board.column * self.board.row -self.board.bombOrginal:
                     print("Game won!")
+                    None
             self.config(relief=SUNKEN)
     
     def colorChange(self):
@@ -176,6 +188,8 @@ class Btn(Button):
             self['bg'] = 'yellow'
         if self['text'] == 5:
             self['bg'] = 'red'
+        if self['text'] == 6:
+            self['bg'] = 'purple'
         else:
             return
     
@@ -186,7 +200,4 @@ class Btn(Button):
             self['bg'] = 'white'
         
 
-
-
 MainGUI()
-
